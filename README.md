@@ -5,7 +5,7 @@ App mobile per la gestione di sveglie e dispositivi domestici, che comunica con 
 - MQTT su WebSocket
 - ESP32 WROOM (microcontrollore)
 ### Descrizione
-Questa app permette di creare, modifciare e cancellare sveglie e controllare altre utenze domestiche tramite comunicazione MQTT. L'app si interfaccia con un ESP32 che gestisce il controllo fisico dei dispositivi
+Questa app permette di creare, modifcare e cancellare sveglie e controllare altre utenze domestiche tramite comunicazione MQTT. L'app si interfaccia con un ESP32 che gestisce il controllo fisico dei dispositivi
 ### Funzionalità principali
 - Creazione e gestione sveglie
 - Controllo remote delle utenze domestiche (luci/serranda)
