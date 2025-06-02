@@ -1,41 +1,88 @@
 import mqtt from 'mqtt';
-const client = mqtt.connect('ws://192.168.1.3:9001');
+import HomeScreen from '../HomeScreen';
+import React, {createContext,useState,useEffect, Children} from 'react'; 
+const LightContext = createContext();
+const client = mqtt.connect('ws://192.168.223.17:9001');//CAMBIARE IP con quello del pc connesso alla rete mobile
 
-client.on('connect',()=>{
-  console.log("Connesso a MQTT broker");
-})
+export const LightProvider =({children}) =>{
+  //variabili di stato dello switch
+  const[isEnabled, setIsEnabled]=useState(false);
 
-client.on('error',(err)=>{
-  console.error('Errore MQTT',err);
-})
-
-client.on('reconnect', () => {
-  console.log(' Riconnessione in corso...');
-});
-
-const sendMQTTMessage = (value) => {
-  const topic = 'sveglia/luci';
-  const message = value.toString();
-
-  if (client.connected) {
-    client.publish(topic, message, (err) => {
-      if (err) {
-        console.error('Errore durante la pubblicazione MQTT:', err);
-      } else {
-        console.log(`Messaggio inviato su ${topic}: ${message}`);
-      }
+  useEffect(()=>{
+    //Sottoscrizione al topic per ricevere lo stato delle luci
+    client.on('connect',()=>{
+      console.log("Connesso a MQTT broker");
+      client.subscribe('sveglia/stato/luci', (err) => {
+        if (err) {
+          console.error('Errore nella sottoscrizione:', err);
+        } else {
+          console.log('Sottoscritto a sveglia/stato/luci');
+        }
+      });
     });
-  } else {
-    console.warn('MQTT non connesso, messaggio non inviato');
+
+    client.on('error',(err)=>{
+      console.error('Errore MQTT',err);
+    });
+
+    client.on('reconnect', () => {
+      console.log(' Riconnessione in corso...');
+    });
+
+   //Si ricevono messaggi relativi allo stato delle luci
+    client.on('message', (topic, message) => {
+      const text = message.toString();
+      if (topic === 'sveglia/stato/luci') {
+        const state = text === '1';
+        setIsEnabled(state);
+      }
+    });   
+  },[]);
+
+   //invia il comando di accensione/spegnimento luci
+  const sendMQTTMessage = (value) => {
+    const topic = 'sveglia/luci';
+    const message = value.toString();
+
+    if (client.connected) {
+      client.publish(topic, message, (err) => {
+        if (err) {
+          console.error('Errore durante la pubblicazione MQTT:', err);
+        } else {
+          console.log(`Messaggio inviato su ${topic}: ${message}`);
+        }
+      });
+    } else {
+      console.warn('MQTT non connesso, messaggio non inviato');
+    }
+  };
+  
+  const lightOff = () => {
+      sendMQTTMessage(0);
+  };
+
+  const lightUp = () => {
+    sendMQTTMessage(1);
+  };
+
+  //Gestione dello switch nell'HomeScreen
+  const toggleSwitch = () =>{
+    setIsEnabled(prevState => {
+    const newState = !prevState;
+    if(newState == true)
+      lightUp();
+    else
+      lightOff();
+    return newState;})
   }
+
+  //Si forniscono le funzioni di utility per gestire le luci
+  return (
+    <LightContext.Provider value={{isEnabled, toggleSwitch}}>
+      {children}
+    </LightContext.Provider>
+  );
 };
 
-const spegniLuci = () => {
-  sendMQTTMessage(0);
-};
+export default LightContext;
 
-const accendiLuci = () => {
-  sendMQTTMessage(1);
-};
-
-export { accendiLuci, spegniLuci };
